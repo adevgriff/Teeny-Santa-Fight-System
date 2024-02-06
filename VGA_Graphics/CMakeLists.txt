@@ -1,1 +1,2 @@
 add_subdirectory(VGA_Graphics_Primitives)
+add_subdirectory(Santa_Fight_System)
