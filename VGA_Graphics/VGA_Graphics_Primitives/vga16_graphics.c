@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
 #include "hardware/dma.h"
@@ -154,10 +155,10 @@ void initVGA() {
 // pixels will be automatically updated on the screen.
 void drawPixel(short x, short y, char color) {
     // Range checks (640x480 display)
-    if (x > 639) x = 639 ;
-    if (x < 0) x = 0 ;
-    if (y < 0) y = 0 ;
-    if (y > 479) y = 479 ;
+    if (x > 639) return;
+    if (x < 0) return;
+    if (y < 0) return;
+    if (y > 479) return;
     //if((x > 639) | (x < 0) | (y > 479) | (y < 0) ) return;
 
     // Which pixel is it?
@@ -172,6 +173,41 @@ void drawPixel(short x, short y, char color) {
     else {
         vga_data_array[pixel>>1] = (vga_data_array[pixel>>1] & BOTTOMMASK) | (color) ;
     }
+}
+
+void getImgSize(uint8_t img[], int *width, int *height) {
+  *width = 0;
+  *height = 0;
+  for(int i = 0; i < sizeof(int); i++) {
+    *width |= (img[i] << i * 8);
+  }
+
+  for(int i = 0; i < sizeof(int); i++) {
+    *height |= (img[i + 4] << i * 8);
+  }
+}
+
+void drawImg(uint8_t img[], uint8_t img_x, uint8_t img_y) {
+  int width = 0;
+  int height = 0;
+  int offset = sizeof(int) * 2;
+  int pixelIndex = 0;
+
+  getImgSize(img, &width, &height);
+
+  for(uint16_t y = img_y; y < (img_y + height); y++) {
+    for(uint16_t x = img_x; x < (img_x + width); x++) {
+      char color1 = img[offset + pixelIndex++];
+      char color2 = color1 >> 4;
+      color1 = color1 & 0xF;
+      drawPixel(x * 2 + 1, y * 2 + 1, color1);
+      drawPixel(x * 2, y * 2, color1);
+      drawPixel(x * 2, y * 2 + 1, color2);
+      drawPixel(x * 2 + 1, y * 2, color2);
+    }
+  }
+
+  return;
 }
 
 void drawVLine(short x, short y, short h, char color) {

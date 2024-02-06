@@ -23,7 +23,7 @@
  *
  */
 
-
+#include <stdint.h>
 // Give the I/O pins that we're using some names that make sense - usable in main()
  enum vga_pins {HSYNC=16, VSYNC, LO_GRN, HI_GRN, BLUE_PIN, RED_PIN} ;
 
@@ -36,6 +36,7 @@ enum colors {BLACK, DARK_GREEN, MED_GREEN, GREEN,
 // VGA primitives - usable in main
 void initVGA(void) ;
 void drawPixel(short x, short y, char color) ;
+void drawImg(uint8_t img[], uint8_t img_x, uint8_t img_y);
 void drawVLine(short x, short y, short h, char color) ;
 void drawHLine(short x, short y, short w, char color) ;
 void drawLine(short x0, short y0, short x1, short y1, char color) ;
