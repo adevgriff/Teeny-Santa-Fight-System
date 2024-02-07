@@ -1,5 +1,0 @@
-    set rA, rZ
-!main
-    str [0x8000], rA
-    inc rA
-    jmp !main

@@ -187,7 +187,7 @@ void getImgSize(uint8_t img[], int *width, int *height) {
   }
 }
 
-void drawImg(uint8_t img[], uint8_t img_x, uint8_t img_y) {
+void drawImg(uint8_t img[], int16_t img_x, int16_t img_y) {
   int width = 0;
   int height = 0;
   int offset = sizeof(int) * 2;
@@ -195,15 +195,19 @@ void drawImg(uint8_t img[], uint8_t img_x, uint8_t img_y) {
 
   getImgSize(img, &width, &height);
 
-  for(uint16_t y = img_y; y < (img_y + height); y++) {
-    for(uint16_t x = img_x; x < (img_x + width); x++) {
-      char color1 = img[offset + pixelIndex++];
-      char color2 = color1 >> 4;
-      color1 = color1 & 0xF;
-      drawPixel(x * 2 + 1, y * 2 + 1, color1);
-      drawPixel(x * 2, y * 2, color1);
-      drawPixel(x * 2, y * 2 + 1, color2);
-      drawPixel(x * 2 + 1, y * 2, color2);
+  for(int16_t y = img_y; y < (img_y + height); y++) {
+    for(int16_t x = img_x; x < (img_x + width); x++) {
+        char color1 = img[offset + pixelIndex++];
+        char color2 = color1 >> 4;
+        color1 = color1 & 0xF;
+        int16_t x_not_offset = ((x - img_x) * 2) + img_x;
+        int16_t x_offset = x_not_offset + 1;
+        int16_t y_not_offset = ((y - img_y) * 2) + img_y;
+        int16_t y_offset = y_not_offset + 1;
+        drawPixel(x_offset, y_offset, color1);
+        drawPixel(x_not_offset, y_not_offset, color1);
+        drawPixel(x_not_offset, y_offset, color2);
+        drawPixel(x_offset, y_not_offset, color2);
     }
   }
 
