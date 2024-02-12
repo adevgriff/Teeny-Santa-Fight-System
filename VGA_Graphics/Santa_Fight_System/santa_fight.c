@@ -24,8 +24,10 @@
 #include <stdint.h>
 
 #include "pico/stdlib.h"
+#include "pico/binary_info.h"
 #include "hardware/pio.h"
 #include "hardware/dma.h"
+#include "hardware/spi.h"
 #include "vga16_graphics.h"
 
 #include "real_santa.h"
@@ -38,11 +40,27 @@
 #define SCREEN_HEIGHT (480)
 #define DRAW_SECTION_BOTTOM (400)
 
-#define GPIO_TALKING 2
-#define GPIO_SNOW_FALLING 3
-#define GPIO_RAINDEER_ANIMATE 4
-#define GPIO_LEFT_PUNCH 5
-#define GPIO_RIGHT_PUNCH 6
+#define GPIO_SDI0_TX (3)
+#define GPIO_SDI0_RX (4)
+#define GPIO_SDIO_SCK (2)
+#define gPIO_SDIO_CS (5)
+
+#define BUF_LEN         0x100
+
+void printbuf(uint8_t buf[], size_t len) {
+    int i;
+    for (i = 0; i < len; ++i) {
+        if (i % 16 == 15)
+            printf(buf[i]);
+        else
+            printf("%02x ", buf[i]);
+    }
+
+    // append trailing newline if there isn't one
+    if (i % 16) {
+        putchar('\n');
+    }
+}
 
 // Some globals for storing timer information
 volatile unsigned int time_accum = 0;
@@ -100,20 +118,28 @@ int main() {
 
 
     // Init GPIO
-    gpio_init(GPIO_TALKING);
-    gpio_set_dir(GPIO_TALKING, GPIO_IN);
+    printf("SPI slave example\n");
 
-    gpio_init(GPIO_SNOW_FALLING);
-    gpio_set_dir(GPIO_SNOW_FALLING, GPIO_IN);
+    // Enable SPI 0 at 1 MHz and connect to GPIOs
+    spi_init(spi_default, 1000 * 1000);
+    spi_set_slave(spi_default, true);
+    gpio_set_function(GPIO_SDI0_RX, GPIO_FUNC_SPI);
+    gpio_set_function(GPIO_SDIO_SCK, GPIO_FUNC_SPI);
+    gpio_set_function(GPIO_SDI0_TX, GPIO_FUNC_SPI);
+    gpio_set_function(gPIO_SDIO_CS, GPIO_FUNC_SPI);
+    // Make the SPI pins available to picotool
+    bi_decl(bi_4pins_with_func(GPIO_SDI0_RX, GPIO_SDI0_TX, GPIO_SDIO_SCK, gPIO_SDIO_CS, GPIO_FUNC_SPI));
 
-    gpio_init(GPIO_RIGHT_PUNCH);
-    gpio_set_dir(GPIO_RIGHT_PUNCH, GPIO_IN);
+    uint8_t out_buf[BUF_LEN], in_buf[BUF_LEN];
 
-    gpio_init(GPIO_LEFT_PUNCH);
-    gpio_set_dir(GPIO_LEFT_PUNCH, GPIO_IN);
+    // Initialize output buffer
+    for (size_t i = 0; i < BUF_LEN; ++i) {
+        // bit-inverted from i. The values should be: {0xff, 0xfe, 0xfd...}
+        out_buf[i] = ~i;
+    }
 
-    gpio_init(GPIO_RAINDEER_ANIMATE);
-    gpio_set_dir(GPIO_RAINDEER_ANIMATE, GPIO_IN);
+    printf("SPI slave says: When reading from MOSI, the following buffer will be written to MISO:\n");
+    printbuf(out_buf, BUF_LEN);
 
     int mouth_counter = 0;
     unsigned int frame_count = 0;
@@ -144,14 +170,14 @@ int main() {
 
         fillRect(320 - 20, 230, 32, height, 0);
 
-        if(gpio_get(GPIO_TALKING)) {
+        if(true) {
           mouth_counter++;
           mouth_counter %= 8;
         } else {
           mouth_counter = 0;
         }
 
-        if(gpio_get(GPIO_SNOW_FALLING)) {
+        if(true) {
           /*create new snow at the top of the screen*/
           if(snow_prev_time - time_accum != 0) {
             snow_prev_time = time_accum;
@@ -188,17 +214,22 @@ int main() {
           }
         } 
 
-        if(gpio_get(GPIO_RAINDEER_ANIMATE)) {
+        if(true) {
           /*animate raindeer a single time until turned off and on again then can happen again*/
         }
 
-        if(gpio_get(GPIO_LEFT_PUNCH)) {
+        if(true) {
           /*animate left punch a single time changes the santa drawing temp*/
         }
 
-        if(gpio_get(GPIO_RIGHT_PUNCH)) {
+        if(true) {
           /*animate right punch a single time changes the santa drawing temp*/
         }
+
+        spi_write_read_blocking(spi0, out_buf, in_buf, BUF_LEN);
+        // Write to stdio whatever came in on the MOSI line.
+        printf("SPI slave says: read page %d from the MOSI line:\n", frame_count);
+        printbuf(in_buf, BUF_LEN);
 
         fillRect(320, 440, SCREEN_WIDTH, 20, BLACK);
         write_score(score);
